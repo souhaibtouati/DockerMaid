@@ -1,0 +1,42 @@
+name: Block direct pushes to main
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  detect-direct-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check commit message
+        id: check
+        run: |
+          echo "commit_msg<<EOF" >> $GITHUB_OUTPUT
+          echo "${{ github.event.head_commit.message }}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Determine if merge commit
+        id: is_merge
+        run: |
+          msg="${{ github.event.head_commit.message }}"
+          if echo "$msg" | grep -q "Merge pull request"; then
+            echo "merge=true" >> $GITHUB_OUTPUT
+          else
+            echo "merge=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create issue for direct push and notify maintainer
+        if: steps.is_merge.outputs.merge == 'false'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const title = `Direct push to main detected: ${process.env.GITHUB_SHA.slice(0,7)}`;
+            const body = `A direct push to the 'main' branch was detected:\n\n- Pusher: @${process.env.GITHUB_ACTOR}\n- Commit: ${process.env.GITHUB_SHA}\n\nThis repository requires that all changes to 'main' be made via pull requests. Please open a PR to merge changes and revert direct pushes if necessary.\n\nMaintainer: @souhaibtouati`;
+            await github.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['direct-push']
+            });
