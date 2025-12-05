@@ -123,7 +123,12 @@ class ApiService {
     }
   }
 
-  async updateAllContainers(): Promise<ApiResponse<{ results: Array<{ containerId: string; containerName: string; status: string }> }>> {
+  async updateAllContainers(): Promise<ApiResponse<{ 
+    results: Array<{ containerId: string; containerName: string; status: string; message?: string; selfUpdate?: boolean }>; 
+    selfUpdateSkipped?: boolean;
+    selfUpdateContainerName?: string;
+    message?: string;
+  }>> {
     try {
       const response = await this.client.post('/containers/update-all');
       return { success: true, data: response.data };

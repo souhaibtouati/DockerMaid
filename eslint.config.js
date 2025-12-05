@@ -19,5 +19,9 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // Allow calling async functions that setState in useEffect - this is a common pattern for data fetching
+      'react-hooks/set-state-in-effect': 'off',
+    },
   },
 ])

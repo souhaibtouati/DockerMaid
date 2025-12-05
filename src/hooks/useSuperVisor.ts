@@ -71,11 +71,19 @@ export function useContainers() {
   }, [fetchContainers]);
 
   const updateAllContainers = useCallback(async () => {
+    // Only mark containers with updates as updating
     setContainers((prev) =>
-      prev.map((c) => c.status === 'running' ? { ...c, isUpdating: true } : c)
+      prev.map((c) => c.hasUpdate ? { ...c, isUpdating: true } : c)
     );
 
     const response = await apiService.updateAllContainers();
+    
+    // Check if self-update was skipped and notify user
+    if (response.success && response.data?.selfUpdateSkipped) {
+      const containerName = response.data.selfUpdateContainerName || 'DockerMaid';
+      alert(`${containerName} was skipped to prevent crash.\n\nTo update DockerMaid, run:\ndocker compose up -d --force-recreate`);
+    }
+    
     await fetchContainers();
     return response;
   }, [fetchContainers]);

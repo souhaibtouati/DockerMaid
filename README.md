@@ -4,7 +4,7 @@ A modern Docker container management dashboard with real-time monitoring, automa
 
 ![DockerMaid Dashboard](https://img.shields.io/badge/DockerMaid-Automation%20%26%20Updates-0891B2)
 [![Docker Hub](https://img.shields.io/docker/v/souhaibtouati/dockermaid?label=Docker%20Hub)](https://hub.docker.com/r/souhaibtouati/dockermaid)
-![Version](https://img.shields.io/badge/version-1.3.0-blue)
+![Version](https://img.shields.io/badge/version-1.4.0-blue)
 
 ## Features
 
@@ -111,7 +111,7 @@ npm run build
 - `POST /api/containers/:id/restart` - Restart a container
 - `GET /api/containers/:id/logs` - Get container logs (query: `tail` for line count)
 - `POST /api/containers/:id/update` - Pull latest image and recreate container
-- `POST /api/containers/update-all` - Update all running containers
+- `POST /api/containers/update-all` - Update all containers with available updates (skips self-update)
 
 ### Images
 - `GET /api/images` - List Docker images
@@ -161,19 +161,32 @@ Recommendations:
 ### Container List with Update Detection
 The dashboard shows all containers with their status. When an update is available, a badge appears next to the container name.
 
+![alt text](image-1.png)
 ### Container Logs
 View real-time logs from any container with syntax highlighting for stderr messages.
+
+![alt text](image-2.png)
 
 ### Registry Links
 Quick access to Docker Hub or other registries to view available tags and changelogs before updating.
 
+![alt text](image-3.png)
+
 ## Changelog
+
+### v1.4.0
+- ✨ **Smart Update All**: "Update All" button now only updates containers with available updates
+- ✨ **Automatic Latest Tag**: Pinned version containers are updated to `latest` tag automatically
+- ✨ **Rollback Detection**: Cache invalidates when local image changes (detects rollbacks)
+- ✨ **Self-Update Protection**: Batch updates skip DockerMaid to prevent crashes (with manual instructions)
+- ✨ **Update History Tags**: Shows version/tag names in update logs instead of SHA hashes
+- 🔧 **GitHub CI/CD**: Added workflows for CI and Docker Hub publishing
+- 📝 **Contributor Docs**: Added CONTRIBUTING.md, PR/issue templates, and code of conduct
 
 ### v1.3.0
 - 🎨 **New Branding**: Renamed to DockerMaid with new shield logo
 - ✨ **Tag Selection**: Choose which tag to update to (latest, stable, beta, etc.)
 - ✨ **Self-Update Detection**: Detects when DockerMaid container needs updating
-- ✨ **Improved Update Logs**: Shows tag/version names instead of SHA hashes
 - 🐛 **Fixed Pinned Version Detection**: Properly detects updates for containers with pinned version tags
 - 🐛 **Fixed Container Recreation**: Preserves all container settings (Cmd, Entrypoint, WorkingDir, etc.)
 

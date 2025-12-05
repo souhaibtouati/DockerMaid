@@ -13,7 +13,7 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3001;
 const API_TOKEN = process.env.API_TOKEN || '';
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.4.0';
 
 // Settings file path
 const settingsPath = join(__dirname, 'settings.json');
@@ -265,10 +265,14 @@ async function checkImageUpdate(imageName, localImageId) {
     return { hasUpdate: false, error: 'No image tag' };
   }
   
-  // Check cache first
+  // Check cache first - but invalidate if local image ID changed (e.g., rollback, manual pull)
   const cached = updateCache.get(imageName);
   if (cached && (Date.now() - cached.checkedAt) < CACHE_TTL) {
-    return cached;
+    // Verify local image hasn't changed (handles rollbacks)
+    if (cached.localImageId === localImageId) {
+      return cached;
+    }
+    console.log(`   Cache invalidated: local image changed (rollback or update detected)`);
   }
   
   const { registry, repository, tag } = parseImageName(imageName);
@@ -345,6 +349,7 @@ async function checkImageUpdate(imageName, localImageId) {
       checkedAt: Date.now(),
       remoteDigest,
       localDigest,
+      localImageId,
       latestDigest,
       isPinnedVersion: isPinned,
       error: null
@@ -359,6 +364,7 @@ async function checkImageUpdate(imageName, localImageId) {
     const result = {
       hasUpdate: false,
       checkedAt: Date.now(),
+      localImageId,
       error: error.message
     };
     updateCache.set(imageName, result);
@@ -899,11 +905,16 @@ app.post('/api/containers/:id/update', async (req, res) => {
   }
 });
 
-// Update all containers
+// Update all containers with available updates (skips self-update to prevent crash)
 app.post('/api/containers/update-all', async (req, res) => {
   try {
     const containers = await docker.listContainers({ all: false }); // Only running containers
     const results = [];
+    let selfUpdateSkipped = false;
+    let selfUpdateContainerName = null;
+    
+    // Get own container ID to detect self-update
+    const ownId = await getOwnContainerId();
     
     for (const containerInfo of containers) {
       const containerId = containerInfo.Id;
@@ -912,28 +923,66 @@ app.post('/api/containers/update-all', async (req, res) => {
       try {
         const container = docker.getContainer(containerId);
         const info = await container.inspect();
-        const imageName = info.Config.Image;
+        const originalImageName = info.Config.Image;
+        const localImageId = info.Image;
         
         // Skip containers without proper image names
-        if (imageName.startsWith('sha256:')) {
+        if (originalImageName.startsWith('sha256:')) {
           results.push({ containerId, containerName, status: 'skipped', message: 'No image tag' });
           continue;
         }
+        
+        // Check if this container has an update available
+        const updateCheck = await checkImageUpdate(originalImageName, localImageId);
+        if (!updateCheck.hasUpdate) {
+          results.push({ containerId, containerName, status: 'skipped', message: 'No update available' });
+          continue;
+        }
+        
+        // Check if this is a self-update (DockerMaid updating itself)
+        const isSelfUpdate = ownId && (containerId === ownId || containerId.startsWith(ownId.substring(0, 12)) || ownId.startsWith(containerId));
+        if (isSelfUpdate) {
+          selfUpdateSkipped = true;
+          selfUpdateContainerName = containerName;
+          console.log(`⚠️ Skipping self-update for ${containerName} in batch update to prevent crash`);
+          results.push({ 
+            containerId, 
+            containerName, 
+            status: 'skipped', 
+            message: 'Self-update skipped. Please update DockerMaid manually using: docker compose up -d --force-recreate',
+            selfUpdate: true
+          });
+          continue;
+        }
+        
+        // Parse image name to get current tag and determine target
+        const { registry, repository, tag: currentTag } = parseImageName(originalImageName);
+        const isPinned = isPinnedVersionTag(currentTag);
+        
+        // For pinned versions, update to 'latest'; for dynamic tags, pull the same tag
+        const newTag = isPinned ? 'latest' : currentTag;
+        const targetImageName = registry === 'registry-1.docker.io' 
+          ? `${repository}:${newTag}` 
+          : `${registry}/${repository}:${newTag}`;
+        
+        console.log(`📦 Updating ${containerName}: ${currentTag} → ${newTag}`);
         
         const logEntry = {
           id: String(logIdCounter++),
           timestamp: new Date().toISOString(),
           containerName,
-          oldImage: info.Image,
-          newImage: '',
+          oldImage: currentTag,
+          oldImageId: localImageId.substring(7, 19), // Short SHA
+          newImage: newTag,
+          newImageId: '',
           status: 'in-progress',
-          message: `Updating ${containerName}...`
+          message: `Updating ${containerName} from ${currentTag} to ${newTag}...`
         };
         updateLogs.unshift(logEntry);
         
-        // Pull latest image
+        // Pull target image
         await new Promise((resolve, reject) => {
-          docker.pull(imageName, (err, stream) => {
+          docker.pull(targetImageName, (err, stream) => {
             if (err) return reject(err);
             docker.modem.followProgress(stream, (err, output) => {
               if (err) return reject(err);
@@ -942,18 +991,40 @@ app.post('/api/containers/update-all', async (req, res) => {
           });
         });
         
-        // Get container config
+        // Get container config - preserve all original settings
         const containerConfig = {
-          Image: imageName,
+          Image: targetImageName,
           name: containerName,
+          Hostname: info.Config.Hostname,
+          Domainname: info.Config.Domainname,
+          User: info.Config.User,
+          AttachStdin: info.Config.AttachStdin,
+          AttachStdout: info.Config.AttachStdout,
+          AttachStderr: info.Config.AttachStderr,
+          Tty: info.Config.Tty,
+          OpenStdin: info.Config.OpenStdin,
+          StdinOnce: info.Config.StdinOnce,
           Env: info.Config.Env,
+          Cmd: info.Config.Cmd,
+          Entrypoint: info.Config.Entrypoint,
           Labels: info.Config.Labels,
+          WorkingDir: info.Config.WorkingDir,
           ExposedPorts: info.Config.ExposedPorts,
+          StopSignal: info.Config.StopSignal,
+          StopTimeout: info.Config.StopTimeout,
+          Healthcheck: info.Config.Healthcheck,
           HostConfig: info.HostConfig,
           NetworkingConfig: {
             EndpointsConfig: info.NetworkSettings.Networks
           }
         };
+        
+        // Remove null/undefined values
+        Object.keys(containerConfig).forEach(key => {
+          if (containerConfig[key] === null || containerConfig[key] === undefined) {
+            delete containerConfig[key];
+          }
+        });
         
         // Stop and remove old container
         try { await container.stop(); } catch (e) { /* ignore */ }
@@ -964,11 +1035,20 @@ app.post('/api/containers/update-all', async (req, res) => {
         await newContainer.start();
         
         const newInfo = await newContainer.inspect();
-        logEntry.status = 'success';
-        logEntry.newImage = newInfo.Image;
-        logEntry.message = `Successfully updated ${containerName}`;
+        const newImageId = newInfo.Image;
         
-        results.push({ containerId, containerName, status: 'success' });
+        // Update log entry with success
+        logEntry.status = 'success';
+        logEntry.newImage = newTag;
+        logEntry.newImageId = newImageId.substring(7, 19);
+        logEntry.message = `Updated ${containerName}: ${currentTag} → ${newTag}`;
+        
+        // Clear update cache for both old and new image names
+        updateCache.delete(originalImageName);
+        updateCache.delete(targetImageName);
+        
+        console.log(`✅ ${containerName} updated: ${currentTag} → ${newTag}`);
+        results.push({ containerId, containerName, status: 'success', oldTag: currentTag, newTag });
       } catch (error) {
         const failedLog = updateLogs.find(l => l.containerName === containerName && l.status === 'in-progress');
         if (failedLog) {
@@ -979,7 +1059,15 @@ app.post('/api/containers/update-all', async (req, res) => {
       }
     }
     
-    res.json({ success: true, results });
+    res.json({ 
+      success: true, 
+      results,
+      selfUpdateSkipped,
+      selfUpdateContainerName,
+      message: selfUpdateSkipped 
+        ? `Updates applied. DockerMaid (${selfUpdateContainerName}) was skipped to prevent crash. Update it manually.`
+        : 'All updates applied successfully.'
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update containers', details: error.message });
   }

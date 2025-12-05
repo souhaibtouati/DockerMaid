@@ -146,15 +146,16 @@ export function ContainerList({
             <RefreshCw className="w-4 h-4" style={{ marginRight: '8px' }} />
             Refresh
           </Button>
-          {runningContainers.length > 0 && (
+          {containersWithUpdates.length > 0 && (
             <Button
               variant="primary"
               size="sm"
               onClick={handleUpdateAll}
               loading={updatingAll}
+              title={`Update ${containersWithUpdates.length} container${containersWithUpdates.length > 1 ? 's' : ''} with available updates`}
             >
               <ArrowUpCircle className="w-4 h-4" style={{ marginRight: '8px' }} />
-              Update All Running
+              Update All ({containersWithUpdates.length})
             </Button>
           )}
         </div>

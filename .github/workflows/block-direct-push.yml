@@ -27,13 +27,13 @@ jobs:
 
       - name: Create issue for direct push and notify maintainer
         if: steps.is_merge.outputs.merge == 'false'
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const title = `Direct push to main detected: ${process.env.GITHUB_SHA.slice(0,7)}`;
-            const body = `A direct push to the 'main' branch was detected:\n\n- Pusher: @${process.env.GITHUB_ACTOR}\n- Commit: ${process.env.GITHUB_SHA}\n\nThis repository requires that all changes to 'main' be made via pull requests. Please open a PR to merge changes and revert direct pushes if necessary.\n\nMaintainer: @souhaibtouati`;
-            await github.issues.create({
+            const title = `Direct push to main detected: ${context.sha.slice(0,7)}`;
+            const body = `A direct push to the 'main' branch was detected:\n\n- Pusher: @${context.actor}\n- Commit: ${context.sha}\n\nThis repository requires that all changes to 'main' be made via pull requests. Please open a PR to merge changes and revert direct pushes if necessary.\n\nMaintainer: @souhaibtouati`;
+            await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title,

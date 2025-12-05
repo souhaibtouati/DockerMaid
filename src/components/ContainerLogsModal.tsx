@@ -36,6 +36,7 @@ export function ContainerLogsModal({
 
   useEffect(() => {
     fetchLogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [containerId, tail]);
 
   useEffect(() => {
