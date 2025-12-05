@@ -1,0 +1,16 @@
+{
+  "name": "dockermaid-server",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "DockerMaid backend server for Docker container management",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dockerode": "^4.0.2",
+    "express": "^4.21.0"
+  }
+}

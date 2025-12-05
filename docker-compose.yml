@@ -1,0 +1,22 @@
+services:
+  dockermaid:
+    build: .
+    image: souhaibtouati/dockermaid:latest
+    container_name: dockermaid
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - API_TOKEN=${API_TOKEN:-}
+    volumes:
+      # Mount Docker socket to allow container management
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    # Run as root to access Docker socket (or configure proper group permissions)
+    # For better security, add your user to the docker group and run rootless
+    networks:
+      - dockermaid-network
+
+networks:
+  dockermaid-network:
+    driver: bridge

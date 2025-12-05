@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 36" fill="none">
+  <defs>
+    <linearGradient id="shieldL" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#22D3EE"/>
+      <stop offset="100%" style="stop-color:#0891B2"/>
+    </linearGradient>
+    <linearGradient id="shieldR" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#0891B2"/>
+      <stop offset="100%" style="stop-color:#0E7490"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Shield -->
+  <path d="M16 1 L4 6 L4 17 C4 25 16 33 16 33 L16 1 Z" fill="url(#shieldL)"/>
+  <path d="M16 1 L28 6 L28 17 C28 25 16 33 16 33 L16 1 Z" fill="url(#shieldR)"/>
+  
+  <!-- Refresh arc -->
+  <path d="M9 12 A7 7 0 0 1 23 12" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"/>
+  <polygon points="23,10.5 23,13.5 25.5,12" fill="white"/>
+  
+  <!-- Center arrow -->
+  <path d="M14 19 L14 15 L12.5 15 L16 11 L19.5 15 L18 15 L18 19 Z" fill="white"/>
+  
+  <!-- Whale -->
+  <ellipse cx="16" cy="25" rx="8" ry="3.5" fill="white"/>
+  <circle cx="21" cy="24.5" r="0.8" fill="#0E7490"/>
+</svg>
+</svg>
