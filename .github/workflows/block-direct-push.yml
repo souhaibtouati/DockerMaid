@@ -19,7 +19,12 @@ jobs:
         id: is_merge
         run: |
           msg="${{ github.event.head_commit.message }}"
-          if echo "$msg" | grep -q "Merge pull request"; then
+          actor="${{ github.actor }}"
+          # Allow maintainer (souhaibtouati) to push directly
+          if [ "$actor" = "souhaibtouati" ]; then
+            echo "merge=true" >> $GITHUB_OUTPUT
+            echo "Maintainer push - allowed"
+          elif echo "$msg" | grep -q "Merge pull request"; then
             echo "merge=true" >> $GITHUB_OUTPUT
           else
             echo "merge=false" >> $GITHUB_OUTPUT
