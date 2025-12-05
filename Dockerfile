@@ -4,6 +4,10 @@
 # Stage 1: Build frontend
 FROM node:20-alpine AS frontend-builder
 WORKDIR /app
+
+# Update Alpine packages for security patches
+RUN apk update && apk upgrade --no-cache
+
 COPY package*.json ./
 RUN npm ci
 COPY . .
@@ -13,9 +17,12 @@ RUN npm run build
 FROM node:20-alpine AS production
 WORKDIR /app
 
+# Update Alpine packages for security patches
+RUN apk update && apk upgrade --no-cache
+
 # Install server dependencies
 COPY server/package*.json ./server/
-RUN cd server && npm ci --production
+RUN cd server && npm ci --omit=dev
 
 # Copy server code
 COPY server/ ./server/

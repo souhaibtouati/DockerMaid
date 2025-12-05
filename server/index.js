@@ -13,7 +13,7 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3001;
 const API_TOKEN = process.env.API_TOKEN || '';
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.4.1';
 
 // Settings file path
 const settingsPath = join(__dirname, 'settings.json');

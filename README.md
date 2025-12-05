@@ -4,7 +4,7 @@ A modern Docker container management dashboard with real-time monitoring, automa
 
 ![DockerMaid Dashboard](https://img.shields.io/badge/DockerMaid-Automation%20%26%20Updates-0891B2)
 [![Docker Hub](https://img.shields.io/docker/v/souhaibtouati/dockermaid?label=Docker%20Hub)](https://hub.docker.com/r/souhaibtouati/dockermaid)
-![Version](https://img.shields.io/badge/version-1.4.0-blue)
+![Version](https://img.shields.io/badge/version-1.4.1-blue)
 
 ## Features
 
@@ -173,6 +173,10 @@ Quick access to Docker Hub or other registries to view available tags and change
 ![alt text](image-3.png)
 
 ## Changelog
+
+### v1.4.1
+- 🔒 **Security Fix**: Updated dependencies to patch CVE-2024-21538 (cross-spawn), CVE-2025-64756 (glob), CVE-2025-5889 (brace-expansion)
+- 🔧 **Dockerfile Hardening**: Added `apk upgrade` to ensure Alpine packages are up-to-date
 
 ### v1.4.0
 - ✨ **Smart Update All**: "Update All" button now only updates containers with available updates
